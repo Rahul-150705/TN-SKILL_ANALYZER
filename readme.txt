@@ -1,7 +1,3 @@
-You are a senior full-stack engineer. Build a complete, production-quality 
-AI Workforce Skill Gap Analyzer web application. Follow every instruction 
-exactly. Do not skip any section. Generate complete working code, not 
-pseudocode or summaries.
 
 ═══════════════════════════════════════════
 PROJECT OVERVIEW
