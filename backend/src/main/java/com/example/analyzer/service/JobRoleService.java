@@ -10,6 +10,7 @@ import com.example.analyzer.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Service
 public class JobRoleService {
@@ -31,6 +32,7 @@ public class JobRoleService {
         role.setDescription(request.getDescription());
         role.setCompany(hrUser.getCompany());
         role.setCreatedBy(hrUser);
+        role.setUniqueId(UUID.randomUUID().toString().replace("-", "").substring(0, 7).toUpperCase());
 
         if (request.getRequiredSkills() != null) {
             List<RequiredSkill> skills = request.getRequiredSkills().stream().map(s -> {
@@ -61,6 +63,17 @@ public class JobRoleService {
         if(!role.getCompany().getId().equals(user.getCompany().getId())) {
              throw new RuntimeException("Unauthorized mapping to another company");
         }
+        return JobRoleResponse.fromEntity(role);
+    }
+
+    public List<JobRoleResponse> getRolesByHrId(Long hrId) {
+        return jobRoleRepository.findByCreatedById(hrId)
+                .stream().map(JobRoleResponse::fromEntity).collect(Collectors.toList());
+    }
+
+    public JobRoleResponse getRoleByUniqueId(String uniqueId) {
+        JobRole role = jobRoleRepository.findByUniqueId(uniqueId)
+                .orElseThrow(() -> new RuntimeException("Role not found with ID: " + uniqueId));
         return JobRoleResponse.fromEntity(role);
     }
 

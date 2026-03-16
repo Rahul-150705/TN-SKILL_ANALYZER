@@ -13,6 +13,7 @@ public class ResumeService {
         try (PDDocument document = Loader.loadPDF(file.getBytes())) {
             PDFTextStripper stripper = new PDFTextStripper();
             String rawText = stripper.getText(document);
+            System.out.println("Resume Size extracted: " + rawText.length() + " characters");
             return cleanText(rawText);
         } catch (IOException e) {
             throw new RuntimeException("Error extracting PDF text: " + e.getMessage());

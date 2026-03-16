@@ -10,6 +10,7 @@ import com.example.analyzer.model.JobRole;
 public class JobRoleResponse {
     private Long id;
     private String title;
+    private String uniqueId;
     private String description;
     private List<RequiredSkillResponse> requiredSkills;
     private LocalDateTime createdAt;
@@ -17,6 +18,7 @@ public class JobRoleResponse {
     public static JobRoleResponse fromEntity(JobRole role) {
         return JobRoleResponse.builder()
             .id(role.getId())
+            .uniqueId(role.getUniqueId())
             .title(role.getTitle())
             .description(role.getDescription())
             .requiredSkills(role.getRequiredSkills() != null ? role.getRequiredSkills().stream()

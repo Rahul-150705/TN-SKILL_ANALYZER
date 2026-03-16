@@ -32,7 +32,7 @@ export default function HRDashboard() {
       await api.delete(`/roles/${id}`);
       setRoles(roles.filter(r => r.id !== id));
       toast.success('Role deleted');
-    } catch(err) {
+    } catch (err) {
       toast.error('Failed to delete');
     }
   };
@@ -109,6 +109,7 @@ export default function HRDashboard() {
               <thead>
                 <tr className="border-b border-slate-700 text-slate-400 text-sm uppercase tracking-wider">
                   <th className="py-4 px-4 font-medium">Role Title</th>
+                  <th className="py-4 px-4 font-medium">Role Code (Share this!)</th>
                   <th className="py-4 px-4 font-medium">Skills Required</th>
                   <th className="py-4 px-4 font-medium">Created At</th>
                   <th className="py-4 px-4 font-medium text-right">Actions</th>
@@ -120,6 +121,11 @@ export default function HRDashboard() {
                     <td className="py-4 px-4">
                       <div className="font-medium text-white">{role.title}</div>
                       <div className="text-xs text-slate-400 truncate max-w-xs">{role.description}</div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-md text-sm font-bold tracking-widest uppercase shadow-sm">
+                        {role.uniqueId || '------'}
+                      </span>
                     </td>
                     <td className="py-4 px-4">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-300">

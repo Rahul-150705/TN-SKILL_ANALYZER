@@ -32,6 +32,21 @@ public class EmployeeAnalysis {
     @Column(name = "matched_skills", columnDefinition = "JSON")
     private String matchedSkills;
 
+    @Column(name = "partial_skills", columnDefinition = "JSON")
+    private String partialSkills;
+
+    @Column(name = "category_scores", columnDefinition = "JSON")
+    private String categoryScores;
+
+    @Column(name = "assessment", columnDefinition = "TEXT")
+    private String assessment;
+
+    @Column(name = "recommendation", columnDefinition = "TEXT")
+    private String recommendation;
+
+    @Column(name = "match_category")
+    private String matchCategory;
+
     @Column(name = "match_percentage")
     private Double matchPercentage;
 

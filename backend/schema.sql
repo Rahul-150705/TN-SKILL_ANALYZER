@@ -1,4 +1,4 @@
-CREATE DATABASE IF NOT EXISTS skillgap_db;
+CREATE DATABASE skillgap_db;
 USE skillgap_db;
 
 CREATE TABLE companies (
@@ -22,6 +22,7 @@ CREATE TABLE users (
 CREATE TABLE job_roles (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
+    unique_id VARCHAR(7) UNIQUE,
     description TEXT,
     company_id BIGINT NOT NULL,
     created_by BIGINT NOT NULL,
@@ -46,6 +47,11 @@ CREATE TABLE employee_skill_analysis (
     detected_skills JSON,
     missing_skills JSON,
     matched_skills JSON,
+    partial_skills JSON,
+    category_scores JSON,
+    assessment TEXT,
+    recommendation TEXT,
+    match_category VARCHAR(100),
     match_percentage DOUBLE,
     analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (employee_id) REFERENCES users(id),

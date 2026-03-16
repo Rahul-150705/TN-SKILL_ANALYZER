@@ -8,4 +8,5 @@ public class LoginResponse {
     private String name;
     private String role;
     private String companyName;
+    private Long companyId;
 }

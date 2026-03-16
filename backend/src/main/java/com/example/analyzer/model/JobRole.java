@@ -16,6 +16,9 @@ public class JobRole {
     @Column(nullable = false)
     private String title;
 
+    @Column(name = "unique_id", unique = true)
+    private String uniqueId;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 

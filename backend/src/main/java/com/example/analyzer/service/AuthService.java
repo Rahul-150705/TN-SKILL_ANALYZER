@@ -71,7 +71,8 @@ public class AuthService {
         
         User user = userRepository.findByEmail(request.getEmail()).orElseThrow();
         String companyName = user.getCompany() != null ? user.getCompany().getName() : null;
+        Long companyId = user.getCompany() != null ? user.getCompany().getId() : null;
 
-        return new LoginResponse(token, user.getId(), user.getName(), user.getRole().name(), companyName);
+        return new LoginResponse(token, user.getId(), user.getName(), user.getRole().name(), companyName, companyId);
     }
 }

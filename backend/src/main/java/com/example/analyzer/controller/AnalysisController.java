@@ -40,6 +40,13 @@ public class AnalysisController {
         return ResponseEntity.ok(skillGapService.analyze(auth.getName(), jobRoleId, file));
     }
 
+    @PostMapping(value = "/resume-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter analyzeResumeStream(@RequestParam("file") MultipartFile file,
+                                                                                               @RequestParam("jobRoleId") Long jobRoleId,
+                                                                                               Authentication auth) {
+        return skillGapService.analyzeStream(auth.getName(), jobRoleId, file);
+    }
+
     @GetMapping("/result/{id}")
     public ResponseEntity<AnalysisResponse> getAnalysisResult(@PathVariable Long id) {
         EmployeeAnalysis a = analysisRepository.findById(id).orElseThrow();
@@ -48,6 +55,9 @@ public class AnalysisController {
                 .employeeName(a.getEmployee().getName())
                 .jobRoleTitle(a.getJobRole().getTitle())
                 .matchPercentage(a.getMatchPercentage())
+                .matchCategory(a.getMatchCategory())
+                .assessment(a.getAssessment())
+                .recommendation(a.getRecommendation())
                 .analyzedAt(a.getAnalyzedAt())
                 .build();
         
@@ -55,6 +65,8 @@ public class AnalysisController {
             if(a.getDetectedSkills() != null) resp.setDetectedSkills(objectMapper.readValue(a.getDetectedSkills(), new TypeReference<>() {}));
             if(a.getMissingSkills() != null) resp.setMissingSkills(objectMapper.readValue(a.getMissingSkills(), new TypeReference<>() {}));
             if(a.getMatchedSkills() != null) resp.setMatchedSkills(objectMapper.readValue(a.getMatchedSkills(), new TypeReference<>() {}));
+            if(a.getPartialSkills() != null) resp.setPartialSkills(objectMapper.readValue(a.getPartialSkills(), new TypeReference<>() {}));
+            if(a.getCategoryScores() != null) resp.setCategoryScores(objectMapper.readValue(a.getCategoryScores(), new TypeReference<>() {}));
         } catch(Exception e){}
         
         return ResponseEntity.ok(resp);

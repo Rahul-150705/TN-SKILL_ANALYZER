@@ -13,9 +13,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Qualifier;
+import java.util.concurrent.Executor;
 
 @Service
 public class SkillGapService {
@@ -26,18 +31,25 @@ public class SkillGapService {
     private final UserRepository userRepository;
     private final RecommendationService recommendationService;
     private final EmployeeAnalysisRepository employeeAnalysisRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
+    private final Executor analysisTaskExecutor;
 
-    public SkillGapService(ResumeService resumeService, OllamaService ollamaService,
-                           JobRoleRepository jobRoleRepository, UserRepository userRepository,
+    public SkillGapService(UserRepository userRepository,
+                           JobRoleRepository jobRoleRepository,
+                           EmployeeAnalysisRepository employeeAnalysisRepository,
+                           ResumeService resumeService,
+                           OllamaService ollamaService,
                            RecommendationService recommendationService,
-                           EmployeeAnalysisRepository employeeAnalysisRepository) {
+                           ObjectMapper objectMapper,
+                           @Qualifier("analysisTaskExecutor") Executor analysisTaskExecutor) {
+        this.userRepository = userRepository;
+        this.jobRoleRepository = jobRoleRepository;
+        this.employeeAnalysisRepository = employeeAnalysisRepository;
         this.resumeService = resumeService;
         this.ollamaService = ollamaService;
-        this.jobRoleRepository = jobRoleRepository;
-        this.userRepository = userRepository;
         this.recommendationService = recommendationService;
-        this.employeeAnalysisRepository = employeeAnalysisRepository;
+        this.objectMapper = objectMapper;
+        this.analysisTaskExecutor = analysisTaskExecutor;
     }
 
     public AnalysisResponse analyze(String employeeEmail, Long roleId, MultipartFile resume) {
@@ -48,39 +60,51 @@ public class SkillGapService {
             throw new RuntimeException("Unauthorized job role access");
         }
 
-        // 1 & 2. Extract Skills
+        // 1. Extract raw text
         String text = resumeService.extractText(resume);
-        List<String> detectedSkills = ollamaService.extractSkills(text);
-        if(detectedSkills == null) detectedSkills = new ArrayList<>();
 
-        // 3. Get Required Skills
-        List<RequiredSkill> requiredSkills = role.getRequiredSkills();
-        if(requiredSkills == null) requiredSkills = new ArrayList<>();
+        // 2. Get Required Skills mapped to names
+        List<String> requiredSkillNames = new ArrayList<>();
+        if(role.getRequiredSkills() != null) {
+            for(RequiredSkill r : role.getRequiredSkills()) {
+                requiredSkillNames.add(r.getSkillName());
+            }
+        }
 
-        // 4. Compare
-        SkillMatchResult result = compareSkills(detectedSkills, requiredSkills);
+        // 3. Ask AI for Comprehensive Analysis
+        OllamaService.ComprehensiveResult aiOutput = ollamaService.generateComprehensiveAnalysis(text, role.getTitle(), role.getDescription(), requiredSkillNames);
 
-        // 5 & 6. Course Recs
-        List<CourseRecommendation> recommendations = recommendationService.getRecommendations(result.missing);
+        // 4. Get Recommended Courses for missing/partial skills
+        List<String> skillsToLearn = new ArrayList<>();
+        if (aiOutput.skillsAnalysis != null) {
+            if (aiOutput.skillsAnalysis.missing != null) skillsToLearn.addAll(aiOutput.skillsAnalysis.missing);
+            if (aiOutput.skillsAnalysis.partial != null) skillsToLearn.addAll(aiOutput.skillsAnalysis.partial);
+        }
+        List<CourseRecommendation> recommendations = recommendationService.getRecommendations(skillsToLearn);
 
-        // 7. Save Analysis
+        // 5. Save Analysis
         EmployeeAnalysis analysis = new EmployeeAnalysis();
         analysis.setEmployee(employee);
         analysis.setJobRole(role);
         analysis.setResumeText(text);
-        
+
         try {
-            analysis.setDetectedSkills(objectMapper.writeValueAsString(detectedSkills));
-            analysis.setMissingSkills(objectMapper.writeValueAsString(result.missing));
-            analysis.setMatchedSkills(objectMapper.writeValueAsString(result.matched));
+            if (aiOutput.skillsAnalysis != null) {
+                analysis.setMatchedSkills(objectMapper.writeValueAsString(aiOutput.skillsAnalysis.matched));
+                analysis.setMissingSkills(objectMapper.writeValueAsString(aiOutput.skillsAnalysis.missing));
+                analysis.setPartialSkills(objectMapper.writeValueAsString(aiOutput.skillsAnalysis.partial));
+            }
+            if (aiOutput.categoryScores != null) {
+                analysis.setCategoryScores(objectMapper.writeValueAsString(aiOutput.categoryScores));
+            }
         } catch (JsonProcessingException e) {
             e.printStackTrace();
-            analysis.setDetectedSkills("[]");
-            analysis.setMissingSkills("[]");
-            analysis.setMatchedSkills("[]");
         }
-        
-        analysis.setMatchPercentage(result.matchPct);
+
+        analysis.setMatchPercentage((double) aiOutput.overallMatchScore);
+        analysis.setMatchCategory(aiOutput.matchCategory);
+        analysis.setAssessment(aiOutput.assessment);
+        analysis.setRecommendation(aiOutput.recommendation);
         analysis.setAnalyzedAt(LocalDateTime.now());
         EmployeeAnalysis saved = employeeAnalysisRepository.save(analysis);
 
@@ -88,64 +112,90 @@ public class SkillGapService {
                 .id(saved.getId())
                 .employeeName(employee.getName())
                 .jobRoleTitle(role.getTitle())
-                .detectedSkills(detectedSkills)
-                .missingSkills(result.missing)
-                .matchedSkills(result.matched)
-                .matchPercentage(result.matchPct)
+                .matchedSkills(aiOutput.skillsAnalysis != null ? aiOutput.skillsAnalysis.matched : new ArrayList<>())
+                .missingSkills(aiOutput.skillsAnalysis != null ? aiOutput.skillsAnalysis.missing : new ArrayList<>())
+                .partialSkills(aiOutput.skillsAnalysis != null ? aiOutput.skillsAnalysis.partial : new ArrayList<>())
+                .categoryScores(aiOutput.categoryScores)
+                .matchPercentage((double) aiOutput.overallMatchScore)
+                .matchCategory(aiOutput.matchCategory)
+                .assessment(aiOutput.assessment)
+                .recommendation(aiOutput.recommendation)
                 .recommendedCourses(recommendations)
                 .analyzedAt(saved.getAnalyzedAt())
                 .build();
     }
 
-    private SkillMatchResult compareSkills(List<String> detectedSkills, List<RequiredSkill> requiredSkills) {
-        List<String> matched = new ArrayList<>();
-        List<String> missing = new ArrayList<>();
+    public SseEmitter analyzeStream(String employeeEmail, Long roleId, MultipartFile resume) {
+        User employee = userRepository.findByEmail(employeeEmail).orElseThrow();
+        JobRole role = jobRoleRepository.findById(roleId).orElseThrow();
+        SseEmitter emitter = new SseEmitter(120_000L); // 2 minute timeout
 
-        for (RequiredSkill required : requiredSkills) {
-            boolean isMatched = false;
-            String reqNorm = normalize(required.getSkillName());
+        analysisTaskExecutor.execute(() -> {
+            try {
+                emitter.send(SseEmitter.event().name("step").data("Extracting text from PDF..."));
+                String text = resumeService.extractText(resume);
 
-            for (String detected : detectedSkills) {
-                String detNorm = normalize(detected);
-
-                // Rule 1: Exact match (normalized)
-                if (reqNorm.equals(detNorm)) { isMatched = true; break; }
-
-                // Rule 2: Contains match (one contains the other)
-                if (reqNorm.contains(detNorm) || detNorm.contains(reqNorm)) {
-                    isMatched = true; break;
+                emitter.send(SseEmitter.event().name("step").data("AI is analyzing your skills..."));
+                
+                List<String> requiredSkillNames = new ArrayList<>();
+                if(role.getRequiredSkills() != null) {
+                    for(RequiredSkill r : role.getRequiredSkills()) {
+                        requiredSkillNames.add(r.getSkillName());
+                    }
                 }
 
-                // Rule 3: Keyword overlap (split into words, check common words)
-                Set<String> reqWords = new HashSet<>(Arrays.asList(reqNorm.split(" ")));
-                Set<String> detWords = new HashSet<>(Arrays.asList(detNorm.split(" ")));
-                reqWords.retainAll(detWords);
-                if (reqWords.size() >= 1 && reqWords.stream().noneMatch(w -> w.length() <= 2)) {
-                    isMatched = true; break;
-                }
+                StringBuilder fullResponse = new StringBuilder();
+                ollamaService.streamComprehensiveAnalysis(text, role.getTitle(), role.getDescription(), requiredSkillNames, token -> {
+                    try {
+                        if (token.equals("[DONE]")) {
+                            // Final processing
+                            String finalJson = fullResponse.toString();
+                            Pattern pattern = Pattern.compile("\\{.*\\}", Pattern.DOTALL);
+                            Matcher matcher = pattern.matcher(finalJson);
+                            if (matcher.find()) {
+                                String cleanJson = matcher.group(0);
+                                OllamaService.ComprehensiveResult aiOutput = objectMapper.readValue(cleanJson, OllamaService.ComprehensiveResult.class);
+                                
+                                // SAVE TO DB (Duplicate logic from analyze)
+                                EmployeeAnalysis analysis = new EmployeeAnalysis();
+                                analysis.setEmployee(employee);
+                                analysis.setJobRole(role);
+                                analysis.setResumeText(text);
+                                if (aiOutput.skillsAnalysis != null) {
+                                    analysis.setMatchedSkills(objectMapper.writeValueAsString(aiOutput.skillsAnalysis.matched));
+                                    analysis.setMissingSkills(objectMapper.writeValueAsString(aiOutput.skillsAnalysis.missing));
+                                    analysis.setPartialSkills(objectMapper.writeValueAsString(aiOutput.skillsAnalysis.partial));
+                                }
+                                if (aiOutput.categoryScores != null) {
+                                    analysis.setCategoryScores(objectMapper.writeValueAsString(aiOutput.categoryScores));
+                                }
+                                analysis.setMatchPercentage((double) aiOutput.overallMatchScore);
+                                analysis.setMatchCategory(aiOutput.matchCategory);
+                                analysis.setAssessment(aiOutput.assessment);
+                                analysis.setRecommendation(aiOutput.recommendation);
+                                analysis.setAnalyzedAt(LocalDateTime.now());
+                                EmployeeAnalysis saved = employeeAnalysisRepository.save(analysis);
+
+                                emitter.send(SseEmitter.event().name("final").data(saved.getId()));
+                            }
+                            emitter.complete();
+                        } else if (token.equals("[ERROR]")) {
+                            emitter.completeWithError(new RuntimeException("AI Stream Error"));
+                        } else {
+                            fullResponse.append(token);
+                            emitter.send(SseEmitter.event().name("token").data(token));
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+
+            } catch (Exception e) {
+                emitter.completeWithError(e);
             }
+        });
 
-            if (isMatched) matched.add(required.getSkillName());
-            else missing.add(required.getSkillName());
-        }
-
-        double matchPct = requiredSkills.isEmpty() ? 0 : (matched.size() * 100.0) / requiredSkills.size();
-        return new SkillMatchResult(matched, missing, matchPct);
+        return emitter;
     }
 
-    private String normalize(String skill) {
-        return skill.toLowerCase().replaceAll("[^a-z0-9 ]", "").trim();
-    }
-
-    private static class SkillMatchResult {
-        List<String> matched;
-        List<String> missing;
-        double matchPct;
-
-        public SkillMatchResult(List<String> matched, List<String> missing, double matchPct) {
-            this.matched = matched;
-            this.missing = missing;
-            this.matchPct = matchPct;
-        }
-    }
 }

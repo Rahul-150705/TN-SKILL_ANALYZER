@@ -12,7 +12,12 @@ public class AnalysisResponse {
     private List<String> detectedSkills;
     private List<String> missingSkills;
     private List<String> matchedSkills;
+    private List<String> partialSkills;
     private Double matchPercentage;
+    private String matchCategory;
+    private java.util.Map<String, Integer> categoryScores;
+    private String assessment;
+    private String recommendation;
     private List<CourseRecommendation> recommendedCourses;
     private LocalDateTime analyzedAt;
 }
