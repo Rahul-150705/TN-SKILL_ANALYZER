@@ -1,10 +1,11 @@
 package com.example.analyzer.controller;
 
 import com.example.analyzer.dto.AnalysisResponse;
-import com.example.analyzer.model.EmployeeAnalysis;
-import com.example.analyzer.repository.EmployeeAnalysisRepository;
+import com.example.analyzer.model.StudentAnalysis;
+import com.example.analyzer.repository.StudentAnalysisRepository;
+import com.example.analyzer.service.AnalysisService;
 import com.example.analyzer.service.PdfExportService;
-import com.example.analyzer.service.SkillGapService;
+import com.example.analyzer.service.OllamaService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpHeaders;
@@ -14,7 +15,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,13 +22,13 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/analyze")
 public class AnalysisController {
 
-    private final SkillGapService skillGapService;
-    private final EmployeeAnalysisRepository analysisRepository;
+    private final AnalysisService analysisService;
+    private final StudentAnalysisRepository analysisRepository;
     private final PdfExportService pdfExportService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public AnalysisController(SkillGapService skillGapService, EmployeeAnalysisRepository analysisRepository, PdfExportService pdfExportService) {
-        this.skillGapService = skillGapService;
+    public AnalysisController(AnalysisService analysisService, StudentAnalysisRepository analysisRepository, PdfExportService pdfExportService) {
+        this.analysisService = analysisService;
         this.analysisRepository = analysisRepository;
         this.pdfExportService = pdfExportService;
     }
@@ -37,52 +37,48 @@ public class AnalysisController {
     public ResponseEntity<AnalysisResponse> analyzeResume(@RequestParam("file") MultipartFile file,
                                                           @RequestParam("jobRoleId") Long jobRoleId,
                                                           Authentication auth) {
-        return ResponseEntity.ok(skillGapService.analyze(auth.getName(), jobRoleId, file));
-    }
-
-    @PostMapping(value = "/resume-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter analyzeResumeStream(@RequestParam("file") MultipartFile file,
-                                                                                               @RequestParam("jobRoleId") Long jobRoleId,
-                                                                                               Authentication auth) {
-        return skillGapService.analyzeStream(auth.getName(), jobRoleId, file);
+        return ResponseEntity.ok(analysisService.analyze(auth.getName(), jobRoleId, file));
     }
 
     @GetMapping("/result/{id}")
     public ResponseEntity<AnalysisResponse> getAnalysisResult(@PathVariable Long id) {
-        EmployeeAnalysis a = analysisRepository.findById(id).orElseThrow();
+        StudentAnalysis a = analysisRepository.findById(id).orElseThrow();
         AnalysisResponse resp = AnalysisResponse.builder()
                 .id(a.getId())
-                .employeeName(a.getEmployee().getName())
+                .studentName(a.getStudent().getName())
                 .jobRoleTitle(a.getJobRole().getTitle())
                 .matchPercentage(a.getMatchPercentage())
-                .matchCategory(a.getMatchCategory())
-                .assessment(a.getAssessment())
-                .recommendation(a.getRecommendation())
+                .recommendationSummary(a.getRecommendationSummary())
                 .analyzedAt(a.getAnalyzedAt())
                 .build();
         
-        try{
-            if(a.getDetectedSkills() != null) resp.setDetectedSkills(objectMapper.readValue(a.getDetectedSkills(), new TypeReference<>() {}));
+        OllamaService.Scores scores = new OllamaService.Scores();
+        scores.certifications = a.getCertificationsScore().intValue();
+        scores.responsiveness = a.getResponsivenessScore().intValue();
+        scores.creativity = a.getCreativityScore().intValue();
+        scores.technicalSkills = a.getTechnicalSkillsScore().intValue();
+        resp.setScores(scores);
+
+        try {
             if(a.getMissingSkills() != null) resp.setMissingSkills(objectMapper.readValue(a.getMissingSkills(), new TypeReference<>() {}));
             if(a.getMatchedSkills() != null) resp.setMatchedSkills(objectMapper.readValue(a.getMatchedSkills(), new TypeReference<>() {}));
             if(a.getPartialSkills() != null) resp.setPartialSkills(objectMapper.readValue(a.getPartialSkills(), new TypeReference<>() {}));
-            if(a.getCategoryScores() != null) resp.setCategoryScores(objectMapper.readValue(a.getCategoryScores(), new TypeReference<>() {}));
         } catch(Exception e){}
         
         return ResponseEntity.ok(resp);
     }
 
-    @GetMapping("/my-results")
+    @GetMapping("/student/my-results")
     public ResponseEntity<List<AnalysisResponse>> getMyResults(Authentication auth) {
         String email = auth.getName();
-        List<EmployeeAnalysis> list = analysisRepository.findAll().stream()
-                .filter(a -> a.getEmployee().getEmail().equals(email))
+        List<StudentAnalysis> list = analysisRepository.findAll().stream()
+                .filter(a -> a.getStudent().getEmail().equals(email))
                 .collect(Collectors.toList());
 
         List<AnalysisResponse> resp = list.stream().map(a -> 
             AnalysisResponse.builder()
                 .id(a.getId())
-                .employeeName(a.getEmployee().getName())
+                .studentName(a.getStudent().getName())
                 .jobRoleTitle(a.getJobRole().getTitle())
                 .matchPercentage(a.getMatchPercentage())
                 .analyzedAt(a.getAnalyzedAt())

@@ -1,109 +1,158 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axios';
-import { Plus, X, Briefcase, List, Info } from 'lucide-react';
+import axios from '../api/axios';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
-export default function JobRoleCreate() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [skills, setSkills] = useState([]);
-  const [currentSkill, setCurrentSkill] = useState('');
-  const [currentCategory, setCurrentCategory] = useState('EV Technology');
+const JobRoleCreate = () => {
+  const [formData, setFormData] = useState({
+    title: '',
+    basicRequirements: '',
+    description: '',
+    minSkills: []
+  });
+  const [currentSkill, setCurrentSkill] = useState({ skillName: '', skillCategory: 'Technical' });
   const navigate = useNavigate();
 
   const addSkill = () => {
-    if (currentSkill.trim() && !skills.some(s => s.skillName === currentSkill.trim())) {
-      setSkills([...skills, { skillName: currentSkill.trim(), skillCategory: currentCategory }]);
-      setCurrentSkill('');
-    }
+    if (!currentSkill.skillName.trim()) return;
+    setFormData(prev => ({ ...prev, minSkills: [...prev.minSkills, currentSkill] }));
+    setCurrentSkill({ ...currentSkill, skillName: '' });
   };
 
   const removeSkill = (index) => {
-    setSkills(skills.filter((_, i) => i !== index));
+    setFormData(prev => ({ ...prev, minSkills: prev.minSkills.filter((_, i) => i !== index) }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (skills.length < 3) return toast.error('Please add at least 3 skills');
-    
+    if (formData.minSkills.length < 3) {
+      toast.error('Please add at least 3 minimum skills');
+      return;
+    }
+
     try {
-      await api.post('/roles', { title, description, requiredSkills: skills });
-      toast.success('Job Role created successfully');
-      navigate('/hr');
-    } catch (err) {
-      toast.error('Failed to create role');
+      await axios.post('/roles', formData);
+      toast.success('Job Role created successfully!');
+      navigate('/admin/dashboard');
+    } catch (_err) {
+      toast.error('Failed to create role. Try again.');
     }
   };
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Create New Job Role</h1>
-        <p className="text-slate-400">Define a target role and required skills for your EV workforce</p>
-      </div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen bg-gray-900 text-white p-6 md:p-12 pb-32"
+    >
+      <div className="max-w-4xl mx-auto bg-gray-800/80 p-10 rounded-[3rem] border border-gray-700 shadow-2xl backdrop-blur-xl">
+        <h1 className="text-4xl font-black mb-10 text-blue-400 uppercase tracking-tighter">Post New Job Role</h1>
 
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-xl">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
-                <Briefcase size={16} /> Role Title
-              </label>
-              <input type="text" required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. EV Battery Technician"
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition" />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
-                <Info size={16} /> Description
-              </label>
-              <textarea required value={description} onChange={e => setDescription(e.target.value)} rows="3" placeholder="Brief description of responsibilities..."
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition" />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-10">
+          <div className="space-y-3">
+            <label className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Official Job Title</label>
+            <input
+              type="text"
+              className="w-full bg-gray-900 border border-gray-700 p-5 rounded-2xl focus:ring-4 focus:ring-blue-500/20 text-xl font-bold transition-all placeholder:text-gray-700"
+              placeholder="e.g. Lead Technical Architect"
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              required
+            />
           </div>
 
-          <div className="pt-6 border-t border-slate-700">
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-4">
-              <List size={16} /> Required Skills (Minimum 3)
-            </label>
-            
-            <div className="flex flex-col md:flex-row gap-4 mb-4">
-              <input type="text" value={currentSkill} onChange={e => setCurrentSkill(e.target.value)} placeholder="e.g. CAN Bus Protocol"
-                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition" />
-              <select value={currentCategory} onChange={e => setCurrentCategory(e.target.value)}
-                className="w-full md:w-64 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition">
-                {['EV Technology', 'Manufacturing', 'Software', 'Safety', 'Management'].map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
+          <div className="space-y-3">
+            <label className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Education & Experience Requirements</label>
+            <textarea
+              className="w-full bg-gray-900 border border-gray-700 p-5 rounded-2xl focus:ring-4 focus:ring-blue-500/20 h-24 transition-all placeholder:text-gray-700"
+              placeholder="e.g. B.Tech Computer Science, 3+ years in React.js..."
+              onChange={(e) => setFormData({ ...formData, basicRequirements: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Detailed Scope of Work</label>
+            <textarea
+              className="w-full bg-gray-900 border border-gray-700 p-5 rounded-2xl focus:ring-4 focus:ring-blue-500/20 h-40 transition-all placeholder:text-gray-700"
+              placeholder="Outline the core responsibilities and expectations..."
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-6">
+            <label className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 block">Critical Skill Benchmarks (Min 3)</label>
+            <div className="flex flex-col md:flex-row gap-4 bg-gray-900/50 p-6 rounded-3xl border border-gray-700/50">
+              <input
+                type="text"
+                className="flex-1 bg-gray-900 border border-gray-700 p-4 rounded-xl focus:ring-4 focus:ring-blue-500/20"
+                placeholder="Skill Label (e.g. Docker)"
+                value={currentSkill.skillName}
+                onChange={(e) => setCurrentSkill({ ...currentSkill, skillName: e.target.value })}
+              />
+              <select
+                className="bg-gray-900 border border-gray-700 p-4 rounded-xl focus:ring-4 focus:ring-blue-500/20 font-bold text-sm uppercase tracking-widest cursor-pointer"
+                value={currentSkill.skillCategory}
+                onChange={(e) => setCurrentSkill({ ...currentSkill, skillCategory: e.target.value })}
+              >
+                <option>Technical</option>
+                <option>Soft Skill</option>
+                <option>Management</option>
               </select>
-              <button type="button" onClick={addSkill} className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 px-6 font-medium rounded-lg shadow-lg shadow-emerald-500/20 px-4 py-3 flex items-center justify-center gap-2 transition">
-                <Plus size={18} /> Add
+              <button
+                type="button"
+                onClick={addSkill}
+                className="px-10 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold transition-all shadow-xl shadow-blue-900/40 uppercase text-xs tracking-widest"
+              >
+                Add Skill
               </button>
             </div>
 
-            {skills.length > 0 && (
-              <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-4 flex flex-wrap gap-2">
-                {skills.map((skill, index) => (
-                  <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    {skill.skillName} <span className="opacity-50 text-xs">({skill.skillCategory})</span>
-                    <button type="button" onClick={() => removeSkill(index)} className="hover:text-red-400 ml-1">
-                      <X size={14} />
+            <div className="flex flex-wrap gap-3">
+              <AnimatePresence>
+                {formData.minSkills.map((skill, index) => (
+                  <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    key={index}
+                    className="flex items-center gap-3 bg-blue-500/10 text-blue-400 px-5 py-3 rounded-2xl border border-blue-500/20 group shadow-lg"
+                  >
+                    <div>
+                      <span className="font-black uppercase text-xs block leading-none mb-1 text-blue-500/50">{skill.skillCategory}</span>
+                      <span className="font-bold text-lg tracking-tight">{skill.skillName}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeSkill(index)}
+                      className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center font-black ml-4"
+                    >
+                      ×
                     </button>
-                  </span>
+                  </motion.div>
                 ))}
-              </div>
-            )}
+              </AnimatePresence>
+              {formData.minSkills.length < 3 && (
+                <div className="text-gray-600 text-xs font-black uppercase tracking-widest py-4 bg-gray-900/30 px-6 rounded-2xl italic border border-dashed border-gray-700">
+                  ⚠️ Minimum 3 skills required to validate assessments ({3 - formData.minSkills.length} remaining)
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="flex justify-end pt-4">
-            <button type="submit" className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 px-8 py-3 rounded-lg font-bold shadow-lg shadow-emerald-500/20 transition text-lg">
-              Save Job Role
-            </button>
-          </div>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            type="submit"
+            className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white text-xl font-black rounded-[2rem] transition-all shadow-2xl shadow-blue-900/30 uppercase tracking-[0.2em]"
+          >
+            Deploy Job Role
+          </motion.button>
         </form>
       </div>
-    </div>
+    </motion.div>
   );
-}
+};
+
+export default JobRoleCreate;

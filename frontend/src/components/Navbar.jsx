@@ -1,7 +1,7 @@
 import { useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, Home, Briefcase, PlusCircle, PieChart } from 'lucide-react';
+import { LogOut, Home, PlusCircle, UserCircle, Search } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useContext(AuthContext);
@@ -9,48 +9,51 @@ export default function Navbar() {
   if (!user) return null;
 
   return (
-    <div className="w-64 bg-slate-900 border-r border-slate-700 h-screen flex flex-col p-4 fixed left-0 top-0">
-      <div className="flex items-center gap-2 mb-8">
-        <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center">
-          <span className="text-white font-bold text-sm">EV</span>
+    <div className="w-64 bg-gray-900 border-r border-gray-800 h-screen flex flex-col p-6 fixed left-0 top-0 z-50 shadow-2xl">
+      <div className="flex items-center gap-3 mb-10 px-2">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-white ${user.role === 'ADMIN' ? 'bg-blue-600' : 'bg-emerald-600'}`}>
+          TN
         </div>
-        <h1 className="text-white font-bold text-lg">Skill Gap Analyzer</h1>
+        <div>
+          <h1 className="text-white font-bold text-sm tracking-tight leading-none uppercase">Skill Analyzer</h1>
+          <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mt-1">v2.0 Redesign</p>
+        </div>
       </div>
 
-      <nav className="flex-1 space-y-2">
-        {user.role === 'HR' ? (
+      <nav className="flex-1 space-y-3">
+        {user.role === 'ADMIN' ? (
           <>
-            <Link to="/hr" className="flex items-center gap-3 text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition">
-              <Home size={18} /> Dashboard
+            <Link to="/admin/dashboard" className="flex items-center gap-4 text-gray-400 hover:text-white p-3 rounded-xl hover:bg-gray-800 transition-all font-bold text-sm tracking-wide group">
+              <Home size={20} className="group-hover:text-blue-400 transition-colors" /> Command Center
             </Link>
-            <Link to="/hr/roles/create" className="flex items-center gap-3 text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition">
-              <PlusCircle size={18} /> Create Role
-            </Link>
-            <Link to="/hr/analytics" className="flex items-center gap-3 text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition">
-              <PieChart size={18} /> Analytics
+            <Link to="/admin/roles/create" className="flex items-center gap-4 text-gray-400 hover:text-white p-3 rounded-xl hover:bg-gray-800 transition-all font-bold text-sm tracking-wide group">
+              <PlusCircle size={20} className="group-hover:text-blue-400 transition-colors" /> Post New Role
             </Link>
           </>
         ) : (
           <>
-            <Link to="/employee" className="flex items-center gap-3 text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition">
-              <Home size={18} /> Dashboard
+            <Link to="/student/enter-admin-id" className="flex items-center gap-4 text-gray-400 hover:text-white p-3 rounded-xl hover:bg-gray-800 transition-all font-bold text-sm tracking-wide group">
+              <Search size={20} className="group-hover:text-emerald-400 transition-colors" /> Browse Roles
             </Link>
           </>
         )}
       </nav>
 
-      <div className="mt-auto border-t border-slate-700 pt-4">
-        <div className="flex items-center gap-3 mb-4 px-2">
-          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
-            <span className="text-xs uppercase">{user.name.substring(0,2)}</span>
+      <div className="mt-auto pt-6 border-t border-gray-800">
+        <div className="flex items-center gap-4 mb-6 px-2">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold border ${user.role === 'ADMIN' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
+            <UserCircle size={20} />
           </div>
-          <div className="text-sm">
-            <p className="text-white font-medium">{user.name}</p>
-            <p className="text-slate-400 text-xs">{user.companyName}</p>
+          <div className="overflow-hidden">
+            <p className="text-white font-bold text-sm truncate uppercase tracking-tighter">{user.name}</p>
+            <p className="text-gray-500 text-[10px] uppercase font-black tracking-widest">{user.role}</p>
           </div>
         </div>
-        <button onClick={logout} className="flex items-center gap-3 text-red-400 hover:text-red-300 w-full p-2 hover:bg-slate-800 rounded transition">
-          <LogOut size={18} /> Logout
+        <button
+          onClick={logout}
+          className="flex items-center gap-4 text-red-500 hover:text-white w-full p-3 hover:bg-red-500 rounded-xl transition-all font-bold text-sm tracking-wide group"
+        >
+          <LogOut size={20} className="group-hover:rotate-12 transition-transform" /> Sign Out
         </button>
       </div>
     </div>

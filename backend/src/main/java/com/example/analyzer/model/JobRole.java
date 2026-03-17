@@ -16,19 +16,15 @@ public class JobRole {
     @Column(nullable = false)
     private String title;
 
-    @Column(name = "unique_id", unique = true)
-    private String uniqueId;
+    @Column(name = "basic_requirements", columnDefinition = "TEXT")
+    private String basicRequirements;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id", nullable = false)
-    private Company company;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by", nullable = false)
-    private User createdBy;
+    @JoinColumn(name = "admin_id", nullable = false)
+    private User admin;
 
     @OneToMany(mappedBy = "jobRole", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RequiredSkill> requiredSkills;

@@ -12,9 +12,11 @@
   "dependencies": {
     "apexcharts": "^5.10.4",
     "axios": "^1.13.6",
+    "framer-motion": "^12.38.0",
     "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-apexcharts": "^2.1.0",
+    "react-circular-progressbar": "^2.2.0",
     "react-dom": "^19.2.4",
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.13.1",

@@ -5,9 +5,9 @@ import lombok.NoArgsConstructor;
 
 @Data @AllArgsConstructor @NoArgsConstructor
 public class CourseRecommendation {
-    private String skillName;
+    private String skill;
     private String courseName;
-    private String provider;
+    private String platform;
     private Integer durationWeeks;
-    private String courseUrl;
+    private String courseLink;
 }

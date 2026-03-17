@@ -7,6 +7,5 @@ public class LoginResponse {
     private Long userId;
     private String name;
     private String role;
-    private String companyName;
-    private Long companyId;
+    private String adminCode;
 }

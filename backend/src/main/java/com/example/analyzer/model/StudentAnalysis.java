@@ -5,50 +5,54 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "employee_skill_analysis")
+@Table(name = "student_analysis")
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
-public class EmployeeAnalysis {
+public class StudentAnalysis {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
-    private User employee;
+    @JoinColumn(name = "student_id", nullable = false)
+    private User student;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "job_role_id", nullable = false)
     private JobRole jobRole;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "admin_id", nullable = false)
+    private User admin;
+
     @Column(name = "resume_text", columnDefinition = "LONGTEXT")
     private String resumeText;
 
-    @Column(name = "detected_skills", columnDefinition = "JSON")
-    private String detectedSkills;
-
-    @Column(name = "missing_skills", columnDefinition = "JSON")
-    private String missingSkills;
+    @Column(name = "match_percentage")
+    private Double matchPercentage;
 
     @Column(name = "matched_skills", columnDefinition = "JSON")
     private String matchedSkills;
 
+    @Column(name = "missing_skills", columnDefinition = "JSON")
+    private String missingSkills;
+
     @Column(name = "partial_skills", columnDefinition = "JSON")
     private String partialSkills;
 
-    @Column(name = "category_scores", columnDefinition = "JSON")
-    private String categoryScores;
+    @Column(name = "certifications_score")
+    private Double certificationsScore;
 
-    @Column(name = "assessment", columnDefinition = "TEXT")
-    private String assessment;
+    @Column(name = "responsiveness_score")
+    private Double responsivenessScore;
 
-    @Column(name = "recommendation", columnDefinition = "TEXT")
-    private String recommendation;
+    @Column(name = "creativity_score")
+    private Double creativityScore;
 
-    @Column(name = "match_category")
-    private String matchCategory;
+    @Column(name = "technical_skills_score")
+    private Double technicalSkillsScore;
 
-    @Column(name = "match_percentage")
-    private Double matchPercentage;
+    @Column(name = "recommendation_summary", columnDefinition = "TEXT")
+    private String recommendationSummary;
 
     @Column(name = "analyzed_at", updatable = false)
     private LocalDateTime analyzedAt;

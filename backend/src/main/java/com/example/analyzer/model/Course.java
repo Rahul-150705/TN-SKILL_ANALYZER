@@ -11,18 +11,15 @@ public class Course {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "skill_name", nullable = false)
-    private String skillName;
-
     @Column(name = "course_name", nullable = false)
     private String courseName;
 
     @Column(length = 100)
-    private String provider;
+    private String platform;
 
-    @Column(name = "duration_weeks")
-    private Integer durationWeeks;
+    @Column(name = "skills_covered", columnDefinition = "JSON")
+    private String skillsCovered;
 
-    @Column(name = "course_url", length = 500)
-    private String courseUrl;
+    @Column(name = "course_link", length = 500)
+    private String courseLink;
 }

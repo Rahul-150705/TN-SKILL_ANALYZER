@@ -18,6 +18,7 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
+        System.out.println("Signup attempt for email: " + request.getEmail());
         authService.signup(request);
         return ResponseEntity.ok().body("User registered successfully");
     }

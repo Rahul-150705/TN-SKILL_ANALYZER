@@ -5,7 +5,5 @@ import java.util.List;
 import java.util.Optional;
 
 public interface JobRoleRepository extends JpaRepository<JobRole, Long> {
-    List<JobRole> findByCompanyId(Long companyId);
-    List<JobRole> findByCreatedById(Long hrId);
-    Optional<JobRole> findByUniqueId(String uniqueId);
+    List<JobRole> findByAdmin_Id(Long adminId);
 }

@@ -21,37 +21,32 @@ public class JobRoleController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('HR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<JobRoleResponse> createRole(@RequestBody JobRoleRequest request, Authentication auth) {
+        request.validate();
         return ResponseEntity.ok(jobRoleService.createRole(request, auth.getName()));
     }
 
-    @GetMapping
-    @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<List<JobRoleResponse>> getRolesForCompany(Authentication auth) {
-        return ResponseEntity.ok(jobRoleService.getRolesForCompany(auth.getName()));
+    @GetMapping("/admin/me")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<JobRoleResponse>> getAdminRoles(Authentication auth) {
+        return ResponseEntity.ok(jobRoleService.getAdminRoles(auth.getName()));
+    }
+
+    @GetMapping("/student/{adminCode}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<List<JobRoleResponse>> getRolesByAdminCode(@PathVariable String adminCode) {
+        return ResponseEntity.ok(jobRoleService.getRolesByAdminCode(adminCode));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<JobRoleResponse> getRole(@PathVariable Long id, Authentication auth) {
-        return ResponseEntity.ok(jobRoleService.getRole(id, auth.getName()));
-    }
-
-    @GetMapping("/hr/{hrId}")
-    @PreAuthorize("hasAnyRole('HR', 'EMPLOYEE')")
-    public ResponseEntity<List<JobRoleResponse>> getRolesByHrId(@PathVariable Long hrId) {
-        return ResponseEntity.ok(jobRoleService.getRolesByHrId(hrId));
-    }
-
-    @GetMapping("/code/{uniqueId}")
-    @PreAuthorize("hasAnyRole('HR', 'EMPLOYEE')")
-    public ResponseEntity<JobRoleResponse> getRoleByUniqueId(@PathVariable String uniqueId) {
-        return ResponseEntity.ok(jobRoleService.getRoleByUniqueId(uniqueId));
+    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
+    public ResponseEntity<JobRoleResponse> getRole(@PathVariable Long id) {
+        return ResponseEntity.ok(jobRoleService.getRole(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('HR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteRole(@PathVariable Long id, Authentication auth) {
         jobRoleService.deleteRole(id, auth.getName());
         return ResponseEntity.ok().build();
