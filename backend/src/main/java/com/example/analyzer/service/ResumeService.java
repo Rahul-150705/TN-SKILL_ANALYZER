@@ -21,6 +21,9 @@ public class ResumeService {
     }
 
     private String cleanText(String text) {
-        return text.replaceAll("[^a-zA-Z0-9 \\n\\r\\\\.\\\\,]", " ").replaceAll("\\\\s+", " ").trim();
+        // FIXED: \\\\s+ was treating it as literal text, not whitespace
+        return text.replaceAll("[^a-zA-Z0-9 \\n\\r.,]", " ")
+                   .replaceAll("\\s+", " ")
+                   .trim();
     }
 }

@@ -9,6 +9,7 @@ import com.example.analyzer.repository.UserRepository;
 import com.example.analyzer.security.JwtUtil;
 import com.example.analyzer.security.UserDetailsImpl;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,7 +26,8 @@ public class AuthService {
     private final JwtUtil jwtUtil;
 
     public AuthService(UserRepository userRepository,
-                       PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager,
+                       PasswordEncoder passwordEncoder,
+                       AuthenticationManager authenticationManager,
                        JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -34,18 +36,31 @@ public class AuthService {
     }
 
     public void signup(SignupRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (request.getName() == null || request.getName().isBlank())
+            throw new RuntimeException("Name is required");
+        if (request.getEmail() == null || request.getEmail().isBlank())
+            throw new RuntimeException("Email is required");
+        if (request.getPassword() == null || request.getPassword().length() < 6)
+            throw new RuntimeException("Password must be at least 6 characters");
+        if (request.getRole() == null || request.getRole().isBlank())
+            throw new RuntimeException("Role is required. Must be ADMIN or STUDENT");
+
+        if (userRepository.findByEmail(request.getEmail().toLowerCase()).isPresent())
             throw new RuntimeException("Email already in use");
+
+        Role role;
+        try {
+            role = Role.valueOf(request.getRole().trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid role '" + request.getRole() + "'. Must be ADMIN or STUDENT");
         }
 
         User user = new User();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
+        user.setName(request.getName().trim());
+        user.setEmail(request.getEmail().toLowerCase().trim());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        
-        Role role = Role.valueOf(request.getRole().toUpperCase());
         user.setRole(role);
-        
+
         if (role == Role.ADMIN) {
             user.setAdminCode("ADM-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         }
@@ -54,15 +69,33 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+        if (request.getEmail() == null || request.getPassword() == null)
+            throw new RuntimeException("Email and password are required");
 
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        String token = jwtUtil.generateToken(userDetails);
-        
-        User user = userRepository.findByEmail(request.getEmail()).orElseThrow();
-        
-        return new LoginResponse(token, user.getId(), user.getName(), user.getRole().name(), user.getAdminCode());
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail().toLowerCase().trim(),
+                            request.getPassword()
+                    )
+            );
+
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            String token = jwtUtil.generateToken(userDetails);
+
+            User user = userRepository.findByEmail(request.getEmail().toLowerCase().trim())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            return new LoginResponse(
+                    token,
+                    user.getId(),
+                    user.getName(),
+                    user.getRole().name(),
+                    user.getAdminCode()
+            );
+
+        } catch (BadCredentialsException e) {
+            throw new RuntimeException("Invalid email or password");
+        }
     }
 }

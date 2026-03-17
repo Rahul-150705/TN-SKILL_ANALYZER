@@ -18,6 +18,7 @@ D:\TN-SKILL ANALYZER\backend\src\main\java\com\example\analyzer\dto\SkillGapStat
 D:\TN-SKILL ANALYZER\backend\src\main\java\com\example\analyzer\dto\SkillRequest.java
 D:\TN-SKILL ANALYZER\backend\src\main\java\com\example\analyzer\dto\TrendPoint.java
 D:\TN-SKILL ANALYZER\backend\src\main\java\com\example\analyzer\dto\WorkforceAnalyticsResponse.java
+D:\TN-SKILL ANALYZER\backend\src\main\java\com\example\analyzer\exception\GlobalExceptionHandler.java
 D:\TN-SKILL ANALYZER\backend\src\main\java\com\example\analyzer\model\Course.java
 D:\TN-SKILL ANALYZER\backend\src\main\java\com\example\analyzer\model\JobRole.java
 D:\TN-SKILL ANALYZER\backend\src\main\java\com\example\analyzer\model\RequiredSkill.java

@@ -12,4 +12,14 @@ api.interceptors.request.use(config => {
   return config;
 });
 
+// ADDED: logs the real backend error to console so you can see it
+api.interceptors.response.use(
+  response => response,
+  error => {
+    const message = error.response?.data?.message || error.message || 'Unknown error';
+    console.error(`API Error [${error.response?.status}]: ${message}`);
+    return Promise.reject(error);
+  }
+);
+
 export default api;

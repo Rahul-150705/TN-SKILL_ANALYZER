@@ -8,16 +8,25 @@ const AdminSignup = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (password.length < 6) {
+            toast.error('Password must be at least 6 characters');
+            return;
+        }
+        setLoading(true);
         try {
             await axios.post('/auth/signup', { name, email, password, role: 'ADMIN' });
             toast.success('Admin registered successfully!');
             navigate('/admin/login');
-        } catch (_err) {
-            toast.error('Signup failed. Email might be taken.');
+        } catch (err) {
+            // FIXED: now shows real backend error
+            toast.error(err.response?.data?.message || 'Signup failed. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -33,36 +42,27 @@ const AdminSignup = () => {
                     <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Admin Signup</h2>
                     <p className="text-gray-500 mt-2">Become a coordinator for talent discovery.</p>
                 </div>
-
                 <form className="space-y-6" onSubmit={handleSubmit}>
-                    <input
-                        type="text"
-                        placeholder="Coordinator Name"
+                    <input type="text" placeholder="Coordinator Name" value={name}
                         className="w-full bg-gray-900 border border-gray-700 p-4 rounded-xl focus:ring-4 focus:ring-blue-500/20 text-white transition-all font-medium"
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                    />
-                    <input
-                        type="email"
-                        placeholder="Work Email"
+                        onChange={(e) => setName(e.target.value)} required />
+                    <input type="email" placeholder="Work Email" value={email}
                         className="w-full bg-gray-900 border border-gray-700 p-4 rounded-xl focus:ring-4 focus:ring-blue-500/20 text-white transition-all font-medium"
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
-                    <input
-                        type="password"
-                        placeholder="Secure Password"
-                        className="w-full bg-gray-900 border border-gray-700 p-4 rounded-xl focus:ring-4 focus:ring-blue-500/20 text-white transition-all font-medium"
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                    />
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        type="submit"
-                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-900/40 transition-all font-bold"
-                    >
-                        Create Admin Account
+                        onChange={(e) => setEmail(e.target.value)} required />
+                    <div className="space-y-1">
+                        <input type="password" placeholder="Secure Password (min 6 chars)" value={password}
+                            className="w-full bg-gray-900 border border-gray-700 p-4 rounded-xl focus:ring-4 focus:ring-blue-500/20 text-white transition-all font-medium"
+                            onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                        {password.length > 0 && password.length < 6 && (
+                            <p className="text-red-400 text-xs font-bold px-1">
+                                {6 - password.length} more characters needed
+                            </p>
+                        )}
+                    </div>
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        type="submit" disabled={loading}
+                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-900/40 transition-all">
+                        {loading ? 'Creating Account...' : 'Create Admin Account'}
                     </motion.button>
                 </form>
                 <p className="text-center text-gray-500 font-medium">

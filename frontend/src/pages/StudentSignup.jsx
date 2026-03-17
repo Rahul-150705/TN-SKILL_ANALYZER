@@ -8,16 +8,24 @@ const StudentSignup = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (password.length < 6) {
+            toast.error('Password must be at least 6 characters');
+            return;
+        }
+        setLoading(true);
         try {
             await axios.post('/auth/signup', { name, email, password, role: 'STUDENT' });
-            toast.success('Registration successful!');
+            toast.success('Registration successful! Please log in.');
             navigate('/student/login');
-        } catch (_err) {
-            toast.error('Signup failed. Email might be taken.');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Signup failed. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -33,36 +41,27 @@ const StudentSignup = () => {
                     <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Student Join</h2>
                     <p className="text-gray-500 mt-2">Start your AI-driven career journey today.</p>
                 </div>
-
                 <form className="space-y-6" onSubmit={handleSubmit}>
-                    <input
-                        type="text"
-                        placeholder="Full Name"
+                    <input type="text" placeholder="Full Name" value={name}
                         className="w-full bg-gray-900 border border-gray-700 p-4 rounded-xl focus:ring-4 focus:ring-emerald-500/20 text-white transition-all font-medium"
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                    />
-                    <input
-                        type="email"
-                        placeholder="Email Address"
+                        onChange={(e) => setName(e.target.value)} required />
+                    <input type="email" placeholder="Email Address" value={email}
                         className="w-full bg-gray-900 border border-gray-700 p-4 rounded-xl focus:ring-4 focus:ring-emerald-500/20 text-white transition-all font-medium"
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
-                    <input
-                        type="password"
-                        placeholder="Create Password"
-                        className="w-full bg-gray-900 border border-gray-700 p-4 rounded-xl focus:ring-4 focus:ring-emerald-500/20 text-white transition-all font-medium"
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                    />
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        type="submit"
-                        className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-emerald-900/40 transition-all font-bold"
-                    >
-                        Register Account
+                        onChange={(e) => setEmail(e.target.value)} required />
+                    <div className="space-y-1">
+                        <input type="password" placeholder="Create Password (min 6 chars)" value={password}
+                            className="w-full bg-gray-900 border border-gray-700 p-4 rounded-xl focus:ring-4 focus:ring-emerald-500/20 text-white transition-all font-medium"
+                            onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                        {password.length > 0 && password.length < 6 && (
+                            <p className="text-red-400 text-xs font-bold px-1">
+                                {6 - password.length} more characters needed
+                            </p>
+                        )}
+                    </div>
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        type="submit" disabled={loading}
+                        className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-emerald-900/40 transition-all">
+                        {loading ? 'Registering...' : 'Register Account'}
                     </motion.button>
                 </form>
                 <p className="text-center text-gray-500 font-medium">
