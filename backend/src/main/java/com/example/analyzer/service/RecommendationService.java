@@ -25,16 +25,15 @@ public class RecommendationService {
         if (missingSkills == null || missingSkills.isEmpty()) return new ArrayList<>();
 
         List<Course> allCourses = courseRepository.findAll();
-        Map<Course, Integer> courseMatchCount = new HashMap<>();
+        Map<String, Course> topCoursePerKey = new HashMap<>();
+        Map<String, Integer> maxMatchesPerKey = new HashMap<>();
 
         for (Course course : allCourses) {
             int matches = 0;
             List<String> coveredSkills = new ArrayList<>();
             try {
                 coveredSkills = objectMapper.readValue(course.getSkillsCovered(), new TypeReference<List<String>>() {});
-            } catch (Exception e) {
-                // handle or ignore
-            }
+            } catch (Exception e) {}
 
             for (String missingSkill : missingSkills) {
                 for (String covered : coveredSkills) {
@@ -45,16 +44,22 @@ public class RecommendationService {
                     }
                 }
             }
+
             if (matches > 0) {
-                courseMatchCount.put(course, matches);
+                // Deduplicate by course name and platform
+                String key = (course.getCourseName().trim() + "|" + (course.getPlatform() != null ? course.getPlatform().trim() : "")).toLowerCase();
+                if (matches > maxMatchesPerKey.getOrDefault(key, -1)) {
+                    maxMatchesPerKey.put(key, matches);
+                    topCoursePerKey.put(key, course);
+                }
             }
         }
 
-        return courseMatchCount.entrySet().stream()
-                .sorted(Map.Entry.<Course, Integer>comparingByValue().reversed())
+        return maxMatchesPerKey.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .limit(3)
                 .map(entry -> {
-                    Course c = entry.getKey();
+                    Course c = topCoursePerKey.get(entry.getKey());
                     return new CourseRecommendation(null, c.getCourseName(), c.getPlatform(), null, c.getCourseLink());
                 })
                 .collect(Collectors.toList());
